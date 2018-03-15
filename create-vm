@@ -1,0 +1,51 @@
+heat_template_version: 2015-04-30
+parameters:
+  net:
+    description: name of network used to launch instance.
+    type: string
+    default: "c2c459ff-ee5e-4a32-ad31-322c895f06f9"
+  subnet:
+    type: string
+    default: "119f9d23-8768-4872-b1c1-4de7fc7aa6a0"
+  key:
+    type: string
+    default: "passw0rd"
+  foo:
+    type: string
+    default: "bar"
+resources:
+  instance_port:
+    type: OS::Neutron::Port
+    properties:
+      name: "instance_port"
+      network: { get_param: net }
+      fixed_ips:
+        - subnet_id: {get_param: subnet }
+
+  inst1:
+    type: OS::Nova::Server
+    properties:
+      name: "test5"
+      flavor: 8-8192-100
+      image: CentOS-7-x86_64-v3
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: { get_file:  bandwidthd.sh }
+          params:
+            $FOO: { get_param: foo }
+
+      networks:
+        - port: { get_resource: instance_port }
+
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: "648dbea0-7bae-4957-8c65-794399b50730"
+
+  association:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: floating_ip }
+    #  port_id: {get_attr: [inst1, addresses, {get_param: net}, 0, port]}
+      port_id: { get_resource: instance_port }
